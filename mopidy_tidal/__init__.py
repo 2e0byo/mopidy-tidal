@@ -30,6 +30,9 @@ class Extension(ext.Extension):
         schema['quality'] = config.String(choices=["LOSSLESS", "HIGH", "LOW"])
         schema['client_id'] = config.String(optional=True)
         schema['client_secret'] = config.String(optional=True)
+        schema["track_cache_size"] = config.Integer(optional=True)
+        schema["track_cache_enabled"] = config.Boolean(optional=True)
+        schema["track_cache_timeout"] = config.Integer(optional=True)
         return schema
 
     def setup(self, registry):
