@@ -4,6 +4,7 @@ import logging
 import math
 from hashlib import md5
 from pathlib import Path
+from re import search
 from threading import Lock, Thread
 from time import sleep
 from urllib.request import urlretrieve
@@ -16,16 +17,22 @@ from mopidy_tidal.heap import Heap
 logger = logging.getLogger(__name__)
 
 
+def _parse_size(s: str) -> int:
+    """Parse a human-readable file size into bytes."""
+    number, unit = search("([0-9]+\.*[0-9]*) *([kmgt]*)", s.lower()).groups()
+    multipliers = {"k": 1E3, "m": 1E6, "g": 1E9, "t": 1E12}
+    return int(float(number) * multipliers.get(unit, 1))
+
+
 class CachingRetriever:
     def __init__(
         self,
         cache_dir: str,
-        max_size: int = 100,
+        max_size: str = "300M",
         directory: str = "track_cache",
         timeout_s: int = 1,
     ):
-        if max_size and max_size <= 0:
-            raise ValueError(f"Invalid cache size: {max_size}")
+        self._max_size = _parse_size(max_size)
 
         self._cache_dir = Path(cache_dir, directory).resolve()
         self._cache_dir.mkdir(parents=True, exist_ok=True)
@@ -35,7 +42,6 @@ class CachingRetriever:
         self._heap = Heap(
             sorted(self._cache_dir.glob("*"), key=lambda p: p.stat().st_atime)
         )
-        self._max_size = max_size
         self._lock = Lock()
         self.timeout_s = timeout_s
 
@@ -49,8 +55,12 @@ class CachingRetriever:
         """Hash a key."""
         return md5(key.encode()).hexdigest()
 
+    @staticmethod
+    def _dirsize(d: Path) -> int:
+        return sum(p.stat().st_size for p in d.glob("*") if p.is_file())
+
     def _oversize(self):
-        return len(self._heap) > self._max_size
+        return self._dirsize(self._cache_dir) > self._max_size
 
     def trim(self):
         """Trim cachedir."""
