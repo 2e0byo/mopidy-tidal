@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class TidalBackend(ThreadingActor, backend.Backend):
     def __init__(self, config, audio):
         super(TidalBackend, self).__init__()
-        self._session = None
+        self._current_session = None
         self._config = config
         context.set_config(self._config)
         self.playback = playback.TidalPlaybackProvider(audio=audio, backend=self)
@@ -36,6 +36,10 @@ class TidalBackend(ThreadingActor, backend.Backend):
             data["refresh_token"] = {"data": self._session.refresh_token}
             with open(oauth_file, "w") as outfile:
                 json.dump(data, outfile)
+
+    @property
+    def _session(self):
+        return self._current_session
 
     def on_start(self):
         quality = self._config["tidal"]["quality"]
@@ -65,7 +69,7 @@ class TidalBackend(ThreadingActor, backend.Backend):
                 "Connecting to TIDAL.. using default client id & client secret from python-tidal"
             )
 
-        self._session = Session(config)
+        self._current_session = Session(config)
         # Always store tidal-oauth cache in mopidy core config data_dir
         data_dir = Extension.get_data_dir(self._config)
         oauth_file = os.path.join(data_dir, "tidal-oauth.json")
