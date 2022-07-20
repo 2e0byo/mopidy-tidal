@@ -32,7 +32,9 @@ class CachingRetriever:
         for fn in self._cache_dir.glob("*.dirty"):
             fn.with_suffix("").unlink(missing_ok=True)
             fn.unlink()
-        self._heap = Heap(self._cache_dir.glob("*"))
+        self._heap = Heap(
+            sorted(self._cache_dir.glob("*"), key=lambda p: p.stat().st_atime)
+        )
         self._max_size = max_size
         self._lock = Lock()
         self.timeout_s = timeout_s
