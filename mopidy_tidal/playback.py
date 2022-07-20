@@ -49,9 +49,12 @@ class CachingRetriever:
         """Hash a key."""
         return md5(key.encode()).hexdigest()
 
+    def _oversize(self):
+        return len(self._heap) > self._max_size
+
     def trim(self):
         """Trim cachedir."""
-        while len(self._heap) > self._max_size:
+        while self._oversize():
             p = self._heap.pop()
             p.unlink()
 
