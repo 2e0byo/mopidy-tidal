@@ -33,6 +33,7 @@ class Extension(ext.Extension):
         schema["track_cache_size"] = config.String(optional=True)
         schema["track_cache_enabled"] = config.Boolean(optional=True)
         schema["track_cache_timeout"] = config.Integer(optional=True)
+        schema["lazy"] = config.Boolean(optional=True)
         return schema
 
     def setup(self, registry):
