@@ -29,6 +29,9 @@ class CachingRetriever:
 
         self._cache_dir = Path(cache_dir, directory).resolve()
         self._cache_dir.mkdir(parents=True, exist_ok=True)
+        for fn in self._cache_dir.glob("*.dirty"):
+            fn.with_suffix("").unlink(missing_ok=True)
+            fn.unlink()
         self._heap = Heap(self._cache_dir.glob("*"))
         self._max_size = max_size
         self._lock = Lock()
@@ -53,7 +56,12 @@ class CachingRetriever:
     def _background_retrieve(self, url: str, outf: Path):
         """Retrieve url in background."""
         logger.debug("Starting url retrieval")
+        dirtyf = outf.with_suffix(".dirty")
+        if dirtyf.exists():  # TODO race condition? probably not in practice.
+            return
+        dirtyf.write_text("")
         urlretrieve(url, str(outf))
+        dirtyf.unlink()
         with self._lock:
             self._heap.push(outf)
 
