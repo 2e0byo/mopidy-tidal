@@ -2,37 +2,32 @@ from __future__ import unicode_literals
 
 import logging
 import operator
-from typing import Optional, Union, Tuple, Collection
-
-from tidalapi.models import Playlist as TidalPlaylist
+from typing import Collection, Optional, Tuple, Union
 
 from mopidy import backend
-from mopidy.models import Playlist as MopidyPlaylist, Ref
+from mopidy.models import Playlist as MopidyPlaylist
+from mopidy.models import Ref
+from tidalapi.models import Playlist as TidalPlaylist
 
 from mopidy_tidal import full_models_mappers
 from mopidy_tidal.helpers import to_timestamp
 from mopidy_tidal.lru_cache import LruCache
-
 
 logger = logging.getLogger(__name__)
 
 
 class PlaylistCache(LruCache):
     def __getitem__(
-            self, key: Union[str, TidalPlaylist], *args, **kwargs
+        self, key: Union[str, TidalPlaylist], *args, **kwargs
     ) -> MopidyPlaylist:
         uri = key.id if isinstance(key, TidalPlaylist) else key
-        uri = (
-            f'tidal:playlist:{uri}'
-            if not uri.startswith('tidal:playlist:')
-            else uri
-        )
+        uri = f"tidal:playlist:{uri}" if not uri.startswith("tidal:playlist:") else uri
 
         playlist = super().__getitem__(uri, *args, **kwargs)
         if (
-            playlist and isinstance(key, TidalPlaylist) and
-            to_timestamp(key.last_updated) >
-            to_timestamp(playlist.last_modified)
+            playlist
+            and isinstance(key, TidalPlaylist)
+            and to_timestamp(key.last_updated) > to_timestamp(playlist.last_modified)
         ):
             # The playlist has been updated since last time:
             # we should refresh the associated cache entry
@@ -43,13 +38,13 @@ class PlaylistCache(LruCache):
 
 
 class TidalPlaylistsProvider(backend.PlaylistsProvider):
-
     def __init__(self, *args, **kwargs):
         super(TidalPlaylistsProvider, self).__init__(*args, **kwargs)
         self._playlists = PlaylistCache()
 
-    def _calculate_added_and_removed_playlist_ids(self) \
-            -> Tuple[Collection[str], Collection[str]]:
+    def _calculate_added_and_removed_playlist_ids(
+        self,
+    ) -> Tuple[Collection[str], Collection[str]]:
         session = self.backend._session
         updated_playlists = [
             *session.user.favorites.playlists(),
@@ -60,28 +55,35 @@ class TidalPlaylistsProvider(backend.PlaylistsProvider):
         if not self._playlists:
             return updated_ids, set()
 
-        current_ids = set(uri.split(':')[-1] for uri in self._playlists.keys())
+        current_ids = set(uri.split(":")[-1] for uri in self._playlists.keys())
         added_ids = updated_ids.difference(current_ids)
         removed_ids = current_ids.difference(updated_ids)
-        self._playlists.prune(*[
-            uri for uri in self._playlists.keys()
-            if uri.split(':')[-1] in removed_ids
-        ])
+        self._playlists.prune(
+            *[
+                uri
+                for uri in self._playlists.keys()
+                if uri.split(":")[-1] in removed_ids
+            ]
+        )
 
         return added_ids, removed_ids
 
     def _has_changes(self, playlist: MopidyPlaylist):
-        upstream_playlist = self.backend._session.get_playlist(playlist.uri.split(':')[-1])
+        upstream_playlist = self.backend._session.get_playlist(
+            playlist.uri.split(":")[-1]
+        )
         if not upstream_playlist:
             return True
 
-        upstream_last_updated_at = to_timestamp(getattr(upstream_playlist, 'last_updated', None))
+        upstream_last_updated_at = to_timestamp(
+            getattr(upstream_playlist, "last_updated", None)
+        )
         local_last_updated_at = to_timestamp(playlist.last_modified)
 
         if not upstream_last_updated_at:
             logger.warning(
-                'You are using a version of python-tidal that does not '
-                'support last_updated on playlist objects'
+                "You are using a version of python-tidal that does not "
+                "support last_updated on playlist objects"
             )
             return True
 
@@ -100,9 +102,9 @@ class TidalPlaylistsProvider(backend.PlaylistsProvider):
 
         logger.debug("Listing TIDAL playlists..")
         refs = [
-            Ref.playlist(uri=pl.uri, name=pl.name)
-            for pl in self._playlists.values()]
-        return sorted(refs, key=operator.attrgetter('name'))
+            Ref.playlist(uri=pl.uri, name=pl.name) for pl in self._playlists.values()
+        ]
+        return sorted(refs, key=operator.attrgetter("name"))
 
     def _get_or_refresh_playlist(self, uri) -> Optional[MopidyPlaylist]:
         if not self._playlists:
@@ -160,7 +162,7 @@ class TidalPlaylistsProvider(backend.PlaylistsProvider):
             )
 
         self._playlists.update(mapped_playlists)
-        backend.BackendListener.send('playlists_loaded')
+        backend.BackendListener.send("playlists_loaded")
         logger.info("TIDAL playlists refreshed")
 
     def save(self, playlist):

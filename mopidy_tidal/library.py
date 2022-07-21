@@ -3,29 +3,20 @@ from __future__ import unicode_literals
 import logging
 from typing import List
 
+from mopidy import backend, models
+from mopidy.models import Image, SearchResult
 from requests.exceptions import HTTPError
 
-from mopidy import backend, models
-
-from mopidy.models import Image, SearchResult
-
-from mopidy_tidal import (
-    full_models_mappers,
-    ref_models_mappers,
-)
-
+from mopidy_tidal import full_models_mappers, ref_models_mappers
 from mopidy_tidal.lru_cache import LruCache
-
 from mopidy_tidal.playlists import PlaylistCache
-
 from mopidy_tidal.utils import apply_watermark
-
 
 logger = logging.getLogger(__name__)
 
 
 class TidalLibraryProvider(backend.LibraryProvider):
-    root_directory = models.Ref.directory(uri='tidal:directory', name='Tidal')
+    root_directory = models.Ref.directory(uri="tidal:directory", name="Tidal")
 
     def __init__(self, *args, **kwargs):
         super(TidalLibraryProvider, self).__init__(*args, **kwargs)
@@ -33,11 +24,11 @@ class TidalLibraryProvider(backend.LibraryProvider):
         self._album_cache = LruCache()
         self._track_cache = LruCache()
         self._playlist_cache = PlaylistCache()
-        self._image_cache = LruCache(directory='image')
+        self._image_cache = LruCache(directory="image")
 
     @property
     def _session(self):
-        return self.backend._session   # type: ignore
+        return self.backend._session  # type: ignore
 
     def get_distinct(self, field, query=None):
         from mopidy_tidal.search import tidal_search
@@ -47,30 +38,35 @@ class TidalLibraryProvider(backend.LibraryProvider):
 
         if not query:  # library root
             if field == "artist" or field == "albumartist":
-                return [apply_watermark(a.name) for a in
-                        session.user.favorites.artists()]
+                return [
+                    apply_watermark(a.name) for a in session.user.favorites.artists()
+                ]
             elif field == "album":
-                return [apply_watermark(a.name) for a in
-                        session.user.favorites.albums()]
+                return [
+                    apply_watermark(a.name) for a in session.user.favorites.albums()
+                ]
             elif field == "track":
-                return [apply_watermark(t.name) for t in
-                        session.user.favorites.tracks()]
+                return [
+                    apply_watermark(t.name) for t in session.user.favorites.tracks()
+                ]
         else:
             if field == "artist":
-                return [apply_watermark(a.name) for a in
-                        session.user.favorites.artists()]
+                return [
+                    apply_watermark(a.name) for a in session.user.favorites.artists()
+                ]
             elif field == "album" or field == "albumartist":
-                artists, _, _ = tidal_search(session,
-                                             query=query,
-                                             exact=True)
+                artists, _, _ = tidal_search(session, query=query, exact=True)
                 if len(artists) > 0:
                     artist = artists[0]
                     artist_id = artist.uri.split(":")[2]
-                    return [apply_watermark(a.name) for a in
-                            session.get_artist_albums(artist_id)]
+                    return [
+                        apply_watermark(a.name)
+                        for a in session.get_artist_albums(artist_id)
+                    ]
             elif field == "track":
-                return [apply_watermark(t.name) for t in
-                        session.user.favorites.tracks()]
+                return [
+                    apply_watermark(t.name) for t in session.user.favorites.tracks()
+                ]
             pass
 
         return []
@@ -88,65 +84,61 @@ class TidalLibraryProvider(backend.LibraryProvider):
             return ref_models_mappers.create_root()
 
         elif uri == "tidal:my_artists":
-            return ref_models_mappers.create_artists(
-                    session.user.favorites.artists())
+            return ref_models_mappers.create_artists(session.user.favorites.artists())
         elif uri == "tidal:my_albums":
-            return ref_models_mappers.create_albums(
-                    session.user.favorites.albums())
+            return ref_models_mappers.create_albums(session.user.favorites.albums())
         elif uri == "tidal:my_playlists":
             return ref_models_mappers.create_playlists(
-                    session.user.favorites.playlists())
+                session.user.favorites.playlists()
+            )
         elif uri == "tidal:my_tracks":
-            return ref_models_mappers.create_tracks(
-                    session.user.favorites.tracks())
+            return ref_models_mappers.create_tracks(session.user.favorites.tracks())
         elif uri == "tidal:moods":
-            return ref_models_mappers.create_moods(
-                    session.get_moods())
+            return ref_models_mappers.create_moods(session.get_moods())
         elif uri == "tidal:genres":
-            return ref_models_mappers.create_genres(
-                    session.get_genres())
+            return ref_models_mappers.create_genres(session.get_genres())
 
         # details
 
-        parts = uri.split(':')
+        parts = uri.split(":")
         nr_of_parts = len(parts)
 
         if nr_of_parts == 3 and parts[1] == "album":
-            return ref_models_mappers.create_tracks(
-                    session.get_album_tracks(parts[2]))
+            return ref_models_mappers.create_tracks(session.get_album_tracks(parts[2]))
 
         if nr_of_parts == 3 and parts[1] == "artist":
             top_10_tracks = session.get_artist_top_tracks(parts[2])[:10]
             albums = ref_models_mappers.create_albums(
-                    session.get_artist_albums(parts[2]))
+                session.get_artist_albums(parts[2])
+            )
             return albums + ref_models_mappers.create_tracks(top_10_tracks)
 
         if nr_of_parts == 3 and parts[1] == "playlist":
             return ref_models_mappers.create_tracks(
-                session.get_playlist_tracks(parts[2]))
+                session.get_playlist_tracks(parts[2])
+            )
 
         if nr_of_parts == 3 and parts[1] == "mood":
             return ref_models_mappers.create_playlists(
-                session.get_mood_playlists(parts[2]))
+                session.get_mood_playlists(parts[2])
+            )
 
         if nr_of_parts == 3 and parts[1] == "genre":
             return ref_models_mappers.create_playlists(
-                session.get_genre_items(parts[2], 'playlists'))
+                session.get_genre_items(parts[2], "playlists")
+            )
 
-        logger.debug('Unknown uri for browse request: %s', uri)
+        logger.debug("Unknown uri for browse request: %s", uri)
         return []
 
     def search(self, query=None, uris=None, exact=False):
         from mopidy_tidal.search import tidal_search
 
         try:
-            artists, albums, tracks = \
-                tidal_search(self._session,
-                             query=query,
-                             exact=exact)
-            return SearchResult(artists=artists,
-                                albums=albums,
-                                tracks=tracks)
+            artists, albums, tracks = tidal_search(
+                self._session, query=query, exact=exact
+            )
+            return SearchResult(artists=artists, albums=albums, tracks=tracks)
         except Exception as ex:
             logger.info("EX")
             logger.info("%r", ex)
@@ -159,15 +151,15 @@ class TidalLibraryProvider(backend.LibraryProvider):
             pass
 
     def _get_images(self, uri) -> List[Image]:
-        assert uri.startswith('tidal:'), f'Invalid TIDAL URI: {uri}'
+        assert uri.startswith("tidal:"), f"Invalid TIDAL URI: {uri}"
 
-        parts = uri.split(':')
+        parts = uri.split(":")
         item_type = parts[1]
-        if item_type == 'track':
+        if item_type == "track":
             # For tracks, retrieve the artwork of the associated album
-            item_type = 'album'
+            item_type = "album"
             item_id = parts[3]
-            uri = ':'.join([parts[0], 'album', parts[3]])
+            uri = ":".join([parts[0], "album", parts[3]])
         else:
             item_id = parts[2]
 
@@ -175,22 +167,22 @@ class TidalLibraryProvider(backend.LibraryProvider):
             # Cache hit
             return self._image_cache[uri]
 
-        logger.debug('Retrieving %r from the API', uri)
-        getter_name = f'get_{item_type}'
+        logger.debug("Retrieving %r from the API", uri)
+        getter_name = f"get_{item_type}"
         getter = getattr(self._session, getter_name, None)
-        assert getter, f'No such session method: {getter_name}'
+        assert getter, f"No such session method: {getter_name}"
 
         item = getter(item_id)
         if not item:
-            logger.debug('%r is not available on the backend', uri)
+            logger.debug("%r is not available on the backend", uri)
             return []
 
         img_uri = self._get_image_uri(item)
         if not img_uri:
-            logger.debug('%r has no associated images', uri)
+            logger.debug("%r has no associated images", uri)
             return []
 
-        logger.debug('Image URL for %r: %r', uri, img_uri)
+        logger.debug("Image URL for %r: %r", uri, img_uri)
         return [Image(uri=img_uri, width=320, height=320)]
 
     def get_images(self, uris):
@@ -201,9 +193,7 @@ class TidalLibraryProvider(backend.LibraryProvider):
             try:
                 images[uri] = self._get_images(uri)
             except (AssertionError, AttributeError, HTTPError) as err:
-                logger.error(
-                    "%s when processing URI %r: %s",
-                    type(err), uri, err)
+                logger.error("%s when processing URI %r: %s", type(err), uri, err)
 
         self._image_cache.update(images)
         return images
@@ -212,18 +202,18 @@ class TidalLibraryProvider(backend.LibraryProvider):
         logger.info("Lookup uris %r", uris)
         if isinstance(uris, str):
             uris = [uris]
-        if not hasattr(uris, '__iter__'):
+        if not hasattr(uris, "__iter__"):
             uris = [uris]
 
         tracks = []
         cache_updates = {}
 
-        for uri in (uris or []):
+        for uri in uris or []:
             data = []
             try:
-                parts = uri.split(':')
+                parts = uri.split(":")
                 item_type = parts[1]
-                cache_name = f'_{parts[1]}_cache'
+                cache_name = f"_{parts[1]}_cache"
                 cache_miss = True
 
                 try:
@@ -234,13 +224,13 @@ class TidalLibraryProvider(backend.LibraryProvider):
 
                 if cache_miss:
                     try:
-                        lookup = getattr(self, f'_lookup_{parts[1]}')
+                        lookup = getattr(self, f"_lookup_{parts[1]}")
                     except AttributeError:
                         continue
 
                     data = cache_data = lookup(self._session, parts)
                     cache_updates[cache_name] = cache_updates.get(cache_name, {})
-                    if item_type == 'playlist':
+                    if item_type == "playlist":
                         # Playlists should be persisted on the cache as objects,
                         # not as lists of tracks. Therefore, _lookup_playlist
                         # returns a tuple that we need to unpack
@@ -248,22 +238,22 @@ class TidalLibraryProvider(backend.LibraryProvider):
 
                     cache_updates[cache_name][uri] = cache_data
 
-                if item_type == 'playlist' and not cache_miss:
+                if item_type == "playlist" and not cache_miss:
                     tracks += data.tracks
                 else:
-                    tracks += data if hasattr(data, '__iter__') else [data]
+                    tracks += data if hasattr(data, "__iter__") else [data]
             except HTTPError as err:
                 logger.error("%s when processing URI %r: %s", type(err), uri, err)
 
         for cache_name, new_data in cache_updates.items():
             getattr(self, cache_name).update(new_data)
 
-        self._track_cache.update({track.uri:track for track in tracks})
+        self._track_cache.update({track.uri: track for track in tracks})
         logger.info("Returning %d tracks", len(tracks))
         return tracks
 
     def _lookup_playlist(self, session, parts):
-        playlist_uri = ':'.join(parts)
+        playlist_uri = ":".join(parts)
         playlist_id = parts[2]
         playlist = self._playlist_cache.get(playlist_uri)
         if playlist:
@@ -279,7 +269,7 @@ class TidalLibraryProvider(backend.LibraryProvider):
 
     def _lookup_track(self, session, parts):
         album_id = parts[3]
-        album_uri = ':'.join(['tidal', 'album', album_id])
+        album_uri = ":".join(["tidal", "album", album_id])
 
         tracks = self._album_cache.get(album_uri)
         if tracks is None:
@@ -292,7 +282,7 @@ class TidalLibraryProvider(backend.LibraryProvider):
 
     def _lookup_album(self, session, parts):
         album_id = parts[2]
-        album_uri = ':'.join(parts)
+        album_uri = ":".join(parts)
 
         tracks = self._album_cache.get(album_uri)
         if tracks is None:
@@ -302,7 +292,7 @@ class TidalLibraryProvider(backend.LibraryProvider):
 
     def _lookup_artist(self, session, parts):
         artist_id = parts[2]
-        artist_uri = ':'.join(parts)
+        artist_uri = ":".join(parts)
 
         tracks = self._artist_cache.get(artist_uri)
         if tracks is None:

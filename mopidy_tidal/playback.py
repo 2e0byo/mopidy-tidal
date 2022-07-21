@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 def _parse_size(s: str) -> int:
     """Parse a human-readable file size into bytes."""
     number, unit = search("([0-9]+\.*[0-9]*) *([kmgt]*)", s.lower()).groups()
-    multipliers = {"k": 1E3, "m": 1E6, "g": 1E9, "t": 1E12}
+    multipliers = {"k": 1e3, "m": 1e6, "g": 1e9, "t": 1e12}
     return int(float(number) * multipliers.get(unit, 1))
 
 
