@@ -2,10 +2,11 @@ from __future__ import unicode_literals
 
 import logging
 import math
+from collections import namedtuple
 from hashlib import md5
+from multiprocessing import Lock, Process
 from pathlib import Path
 from re import search
-from threading import Lock, Thread
 from time import sleep
 from urllib.request import urlretrieve
 
@@ -24,7 +25,12 @@ def _parse_size(s: str) -> int:
     return int(float(number) * multipliers.get(unit, 1))
 
 
+_Download = namedtuple("_Download", "process, outf")
+
+
 class CachingRetriever:
+    MAX_DOWNLOADS = 2  # Max parallel downloads.  Setting this to 1 minimises bandwidth, but prevents returning to tracks which failed to buffer.
+
     def __init__(
         self,
         cache_dir: str,
@@ -44,6 +50,7 @@ class CachingRetriever:
         )
         self._lock = Lock()
         self.timeout_s = timeout_s
+        self._background_downloads: list[_Download] = []
 
     @staticmethod
     def file_url(p: Path):
@@ -70,15 +77,18 @@ class CachingRetriever:
 
     def _background_retrieve(self, url: str, outf: Path):
         """Retrieve url in background."""
-        logger.debug("Starting url retrieval")
+        logger.debug("TIDAL Starting url retrieval")
         dirtyf = outf.with_suffix(".dirty")
         if dirtyf.exists():  # TODO race condition? probably not in practice.
             return
         dirtyf.write_text("")
-        urlretrieve(url, str(outf))
+        try:
+            urlretrieve(url, str(outf))
+            with self._lock:
+                self._heap.push(outf)
+        except Exception:
+            outf.unlink(missing_ok=True)
         dirtyf.unlink()
-        with self._lock:
-            self._heap.push(outf)
 
     def cached(self, key: str):
         return key in self._heap
@@ -98,7 +108,25 @@ class CachingRetriever:
     def download(self, key: str, url: str) -> str:
         """Download a file."""
         outf = self._cache_dir / self.hash(key)
-        Thread(target=self._background_retrieve, args=(url, outf)).start()
+        self._background_downloads = [
+            d for d in self._background_downloads if d.process.is_alive()
+        ]
+        for download in self._background_downloads[self.MAX_DOWNLOADS - 1 :]:
+            logger.debug("TIDAL Stopping previous track download.")
+
+            download.process.terminate()
+            download.process.join(1)
+            if download.process.is_alive():
+                download.process.kill()
+
+            download.outf.unlink(missing_ok=True)
+            download.outf.with_suffix(".dirty").unlink(missing_ok=True)
+
+        download = _Download(
+            Process(target=self._background_retrieve, args=(url, outf)), outf
+        )
+        download.process.start()
+        self._background_downloads.append(download)
         self.trim()
 
         attempt = 0
