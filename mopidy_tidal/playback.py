@@ -136,7 +136,12 @@ class CachingRetriever:
             sleep(0.01)
 
         if not viable:
-            raise Exception(f"Failed to fetch {key}.")
+            reason = (
+                f"only fetched {outf.stat().st_size} bytes"
+                if outf.exists()
+                else "failed to fetch anything"
+            )
+            raise Exception(f"Failed to fetch {key} ({reason}).")
 
         return self.file_url(outf)
 
