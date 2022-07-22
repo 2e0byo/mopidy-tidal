@@ -4,9 +4,12 @@ import logging
 from threading import Thread
 
 from lru_cache import SearchCache
-from mopidy_tidal.full_models_mappers import (create_mopidy_albums,
-                                              create_mopidy_artists,
-                                              create_mopidy_tracks)
+
+from mopidy_tidal.full_models_mappers import (
+    create_mopidy_albums,
+    create_mopidy_artists,
+    create_mopidy_tracks,
+)
 from mopidy_tidal.utils import remove_watermark
 
 logger = logging.getLogger(__name__)

@@ -11,7 +11,6 @@ from time import sleep
 from urllib.request import urlretrieve
 
 from mopidy import backend
-
 from mopidy_tidal import Extension, context
 from mopidy_tidal.heap import Heap
 

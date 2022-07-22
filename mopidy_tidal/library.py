@@ -3,10 +3,10 @@ from __future__ import unicode_literals
 import logging
 from typing import List
 
-from mopidy import backend, models
 from mopidy.models import Image, SearchResult
 from requests.exceptions import HTTPError
 
+from mopidy import backend, models
 from mopidy_tidal import full_models_mappers, ref_models_mappers
 from mopidy_tidal.lru_cache import LruCache
 from mopidy_tidal.playlists import PlaylistCache

@@ -4,11 +4,11 @@ import logging
 import operator
 from typing import Collection, Optional, Tuple, Union
 
-from mopidy import backend
 from mopidy.models import Playlist as MopidyPlaylist
 from mopidy.models import Ref
 from tidalapi.models import Playlist as TidalPlaylist
 
+from mopidy import backend
 from mopidy_tidal import full_models_mappers
 from mopidy_tidal.helpers import to_timestamp
 from mopidy_tidal.lru_cache import LruCache
