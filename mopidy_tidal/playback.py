@@ -177,5 +177,5 @@ class TidalPlaybackProvider(backend.PlaybackProvider):
         else:
             final_url = self.backend._session.get_media_url(track_id)
 
-        logger.info("transformed into %s", final_url)
+        logger.info("TIDAL transformed into %s", final_url)
         return final_url
