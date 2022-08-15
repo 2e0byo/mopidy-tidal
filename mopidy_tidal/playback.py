@@ -95,7 +95,7 @@ class CachingRetriever:
 
     @staticmethod
     def _viable(f: Path):
-        BUFFER_SIZE = 2**18
+        BUFFER_SIZE = 2**19
         return f.exists() and f.stat().st_size > BUFFER_SIZE
 
     def get_cached(self, key: str) -> str:
