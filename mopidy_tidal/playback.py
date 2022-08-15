@@ -76,7 +76,7 @@ class CachingRetriever:
 
     def _background_retrieve(self, url: str, outf: Path):
         """Retrieve url in background."""
-        logger.debug("TIDAL Starting url retrieval")
+        logger.debug("TIDAL Starting background download.")
         dirtyf = outf.with_suffix(".dirty")
         if dirtyf.exists():  # TODO race condition? probably not in practice.
             return
@@ -88,6 +88,7 @@ class CachingRetriever:
         except Exception:
             outf.unlink(missing_ok=True)
         dirtyf.unlink()
+        logger.debug("TIDAL downloaded.")
 
     def cached(self, key: str):
         return key in self._heap
