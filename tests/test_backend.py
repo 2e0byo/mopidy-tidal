@@ -11,8 +11,8 @@ from mopidy_tidal.playlists import TidalPlaylistsProvider
 
 
 @pytest.fixture
-def get_backend(mocker):
-    def _get_backend(config=mocker.MagicMock(), audio=mocker.Mock()):
+def get_backend(mocker, config):
+    def _get_backend(config=config, audio=mocker.Mock()):
         backend = TidalBackend(config, audio)
         session_factory = mocker.Mock()
         session = mocker.Mock()
