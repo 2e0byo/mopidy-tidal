@@ -51,7 +51,6 @@ class LruCache(OrderedDict):
         pathlib.Path(cache_dir).mkdir(parents=True, exist_ok=True)
 
         # Previous filename format
-        key = ":".join(parts)
         cache_file = os.path.join(cache_dir, f"{key}.cache")
         if os.path.isfile(cache_file):
             return cache_file
