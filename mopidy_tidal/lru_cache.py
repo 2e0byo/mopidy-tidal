@@ -12,6 +12,10 @@ from mopidy_tidal import Extension, context
 logger = logging.getLogger(__name__)
 
 
+def id_to_cachef(id: str) -> str:
+    return id.replace(":", "-")
+
+
 class LruCache(OrderedDict):
     def __init__(self, max_size: Optional[int] = 1024, persist=True, directory=""):
         """
@@ -56,7 +60,7 @@ class LruCache(OrderedDict):
             return cache_file
 
         # New filename format
-        key = "-".join(parts)
+        key = id_to_cachef(key)
         return os.path.join(cache_dir, f"{key}.cache")
 
     def _get_from_storage(self, key):
