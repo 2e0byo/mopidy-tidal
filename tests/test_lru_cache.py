@@ -1,4 +1,3 @@
-import os
 import shutil
 from pathlib import Path
 
@@ -151,19 +150,32 @@ def test_no_max_size(config):
     assert len(l) == 2**12
 
 
-def test_migrate_old_cache_filename(lru_cache):
+def test_migrate_moves_old_file(lru_cache):
     uri = "tidal:uri:val"
     value = "hi"
     lru_cache[uri] = value
     assert lru_cache[uri] == value
+
+    cache_file = lru_cache.cache_file(uri)
+    new_style_cache_file = cache_file.with_stem("-".join(uri.split(":")))
+    assert cache_file == new_style_cache_file, "Cache filename not dash-separated"
+
+    # Rename the cache filename to match the old file format
+    cache_file.rename(cache_file.with_stem(uri))
+
+    # Remove the in-memory cache element in order to force a filesystem reload
+    lru_cache.pop(uri)
+    cached_value = lru_cache.get(uri)
+    assert cached_value == value
+
+    assert cache_file == new_style_cache_file, "Failed to migrate to dash-separated"
 
     filename = lru_cache.cache_file(uri)
     new_filename = filename.with_stem("-".join(uri.split(":")))
     assert filename == new_filename, "Cache filename not dash-separated"
 
     # Rename the cache filename to match the old file format
-    _new_filename = os.path.join(os.path.dirname(filename), f"{uri}.cache")
-    shutil.move(filename, _new_filename)
+    filename.rename(filename.with_stem(uri))
 
     # Remove the in-memory cache element in order to force a filesystem reload
     lru_cache.pop(uri)
