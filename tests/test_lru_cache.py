@@ -151,28 +151,26 @@ def test_no_max_size(config):
     assert len(l) == 2**12
 
 
-def test_old_cache_filename(lru_cache):
+def test_migrate_old_cache_filename(lru_cache):
     uri = "tidal:uri:val"
     value = "hi"
     lru_cache[uri] = value
     assert lru_cache[uri] == value
 
-    # The cache filename should be dash-separated
     filename = lru_cache.cache_file(uri)
-    assert filename.name == "-".join(uri.split(":")) + ".cache"
+    new_filename = filename.with_stem("-".join(uri.split(":")))
+    assert filename == new_filename, "Cache filename not dash-separated"
 
     # Rename the cache filename to match the old file format
-    new_filename = os.path.join(os.path.dirname(filename), f"{uri}.cache")
-    shutil.move(filename, new_filename)
+    _new_filename = os.path.join(os.path.dirname(filename), f"{uri}.cache")
+    shutil.move(filename, _new_filename)
 
     # Remove the in-memory cache element in order to force a filesystem reload
     lru_cache.pop(uri)
     cached_value = lru_cache.get(uri)
     assert cached_value == value
 
-    # The cache filename should be column-separated
-    filename = lru_cache.cache_file(uri)
-    assert filename.name == f"{uri}.cache"
+    assert filename == new_filename, "Failed to migrate to dash-separated"
 
 
 @pytest.mark.xfail

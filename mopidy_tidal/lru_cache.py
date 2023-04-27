@@ -15,6 +15,15 @@ def id_to_cachef(id: str) -> Path:
     return Path(id.replace(":", "-") + ".cache")
 
 
+def migrate(new: Path, old: Path):
+    """Migrate to new path.  If new already exists, old will be removed."""
+    if old.is_file():
+        if new.is_file():
+            old.unlink()
+        else:
+            old.rename(new)
+
+
 class LruCache(OrderedDict):
     def __init__(self, max_size: Optional[int] = 1024, persist=True, directory=""):
         """
@@ -56,8 +65,7 @@ class LruCache(OrderedDict):
         cache_dir.mkdir(parents=True, exist_ok=True)
         cache_file = cache_dir / id_to_cachef(key)
         legacy_cache_file = cache_dir / f"{key}.cache"
-        if legacy_cache_file.is_file():
-            return legacy_cache_file
+        migrate(cache_file, legacy_cache_file)
 
         return cache_file
 
