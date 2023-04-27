@@ -3,7 +3,7 @@ import pytest
 from mopidy_tidal.heap import Heap
 
 
-def test_push_pop():
+def test_push_pop_returns_data_in_correct_order():
     h = Heap()
     data = ["a", "c", "d"]
     for x in data:
@@ -11,13 +11,13 @@ def test_push_pop():
     assert data == [h.pop() for _ in range(3)]
 
 
-def test_initial():
+def test_heap_returns_data_in_order_passed_at_initialisation():
     data = ["a", "c", "d", "new"]
     h = Heap(data)
     assert data == [h.pop() for _ in range(4)]
 
 
-def test_remove():
+def test_removed_data_is_discarded():
     data = ["a", "c", "d", "new"]
     h = Heap(data)
     h.remove("d")
@@ -27,21 +27,21 @@ def test_remove():
     assert not h._heap, "Memory leak"
 
 
-def test_move_to_top():
+def test_move_to_top_moves_to_next_pop():
     data = ["a", "c", "d", "new"]
     h = Heap(data)
     h.move_to_top("c")
     assert ["a", "d", "new", "c"] == [h.pop() for _ in range(4)]
 
 
-def test_remove_nonexistent():
+def test_attempt_to_remove_nonexistent_data_raises_keyerror():
     data = ["a", "c", "d", "new"]
     h = Heap(data)
     with pytest.raises(KeyError):
         h.remove("asdf")
 
 
-def test_move_to_top_nonexistent():
+def test_attempt_to_move_to_top_nonexistent_data_raises_key_error_and_leaves_heap_unmodified():
     data = ["a", "c", "d", "new"]
     h = Heap(data)
     _heap = h._heap[:]
@@ -52,7 +52,7 @@ def test_move_to_top_nonexistent():
     assert h._heap_map == _heap_map, "heap modified"
 
 
-def test_len():
+def test_heap_len():
     data = ["a", "c", "d", "new"]
     h = Heap(data)
     assert len(h) == 4
@@ -63,14 +63,14 @@ def test_len():
     assert len(h) == 3
 
 
-def test_contains():
+def test_heap_contains():
     data = ["a", "c", "d", "new"]
     h = Heap(data)
     assert all(x in h for x in data)
     assert "nonsuch" not in h
 
 
-def test_entries():
+def test_heap_entries():
     data = ("a", "c", "d", "new")
     h = Heap(data)
     assert h.entries == data
