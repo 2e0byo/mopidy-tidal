@@ -12,7 +12,7 @@ def lru_cache(config):
     return LruCache(max_items_ram=8, persist=True, directory="cache")
 
 
-def test_props(config):
+def test_cache_public_attributes_respect_initialisation(config):
     l = LruCache(max_items_ram=1678, persist=True, directory="cache")
     assert l.max_items_ram == 1678
     assert l.persist
@@ -21,34 +21,46 @@ def test_props(config):
     assert not l.persist
 
 
-def test_store(lru_cache):
+def test_value_overwritten(lru_cache):
     assert not lru_cache.keys()
-    lru_cache["tidal:uri:val"] = "invisible"
+    lru_cache["tidal:uri:val"] = "initial"
+    assert lru_cache["tidal:uri:val"] == "initial"
+    lru_cache["tidal:uri:val"] = "hi"
+    assert lru_cache["tidal:uri:val"] == "hi"
+
+
+def test_simple_stored_objects_retrieved_correctly(lru_cache):
+    assert not lru_cache.keys()
     lru_cache["tidal:uri:val"] = "hi"
     lru_cache["tidal:uri:none"] = None
-    lru_cache["tidal:uri:otherval"] = {"complex": "object", "with": [0, 1]}
     assert lru_cache["tidal:uri:val"] == "hi" == lru_cache.get("tidal:uri:val")
+    assert lru_cache["tidal:uri:none"] is None
+    assert len(lru_cache) == 2
+
+
+def test_complex_stored_objects_retrieved_correctly(lru_cache):
+    assert not lru_cache.keys()
+    lru_cache["tidal:uri:otherval"] = {"complex": "object", "with": [0, 1]}
     assert (
         lru_cache["tidal:uri:otherval"]
         == {"complex": "object", "with": [0, 1]}
         == lru_cache.get("tidal:uri:otherval")
     )
-    assert lru_cache["tidal:uri:none"] is None
-    assert len(lru_cache) == 3
+    assert len(lru_cache) == 1
 
 
-def test_get_fail(lru_cache):
+def test_failed_lookup_with_persistence_raises_keyerror(lru_cache):
     with pytest.raises(KeyError):
         lru_cache["tidal:uri:nonsuch"]
 
 
-def test_get_fail_memory(config):
+def test_failed_lookup_without_persistence_raises_keyerror(config):
     l = LruCache(persist=False)
     with pytest.raises(KeyError):
         l["tidal:uri:nonsuch"]
 
 
-def test_update(lru_cache):
+def test_update_sets_multiple_values(lru_cache):
     lru_cache.update({"tidal:uri:val": "hi", "tidal:uri:otherval": 17})
     assert lru_cache["tidal:uri:val"] == "hi"
     assert lru_cache["tidal:uri:otherval"] == 17
@@ -58,19 +70,19 @@ def test_update(lru_cache):
 
 @pytest.mark.gt_3_7
 @pytest.mark.gt_3_8
-def test_newstyle_update(lru_cache):
+def test_orequals_update_set_multiple_values(lru_cache):
     assert "tidal:uri:val" not in lru_cache
     lru_cache |= {"tidal:uri:val": "hi", "tidal:uri:otherval": 17}
     assert lru_cache["tidal:uri:val"] == "hi"
     assert lru_cache["tidal:uri:otherval"] == 17
 
 
-def test_get(lru_cache):
+def test_get_default_returns_default(lru_cache):
     uniq = object()
     assert lru_cache.get("tidal:uri:nonsuch", default=uniq) is uniq
 
 
-def test_prune(lru_cache):
+def test_prune_removes_key(lru_cache):
     lru_cache.update({"tidal:uri:val": "hi", "tidal:uri:otherval": 17})
     assert "tidal:uri:val" in lru_cache
     lru_cache.prune("tidal:uri:val")
@@ -78,16 +90,17 @@ def test_prune(lru_cache):
     assert "tidal:uri:otherval" in lru_cache
 
 
-def test_prune_all(lru_cache):
+def test_prune_all_removes_all(lru_cache):
     lru_cache.update({"tidal:uri:val": "hi", "tidal:uri:otherval": 17})
     assert "tidal:uri:val" in lru_cache
     assert "tidal:uri:otherval" in lru_cache
     lru_cache.prune_all()
     assert "tidal:uri:val" not in lru_cache
     assert "tidal:uri:otherval" not in lru_cache
+    assert len(lru_cache) == 0
 
 
-def test_persist(config):
+def test_persisted_items_retrieved_by_new_instance(config):
     l = LruCache(max_items_ram=8, persist=True, directory="cache")
     l.update({"tidal:uri:val": "hi", "tidal:uri:otherval": 17, "tidal:uri:none": None})
     del l
@@ -99,7 +112,7 @@ def test_persist(config):
     assert new_l["tidal:uri:none"] is None
 
 
-def test_corrupt(config):
+def test_corrupt_persisted_item_is_discarded(config):
     l = LruCache(max_items_ram=8, persist=True, directory="cache")
     l.update({"tidal:uri:val": "hi", "tidal:uri:otherval": 17})
     del l
@@ -113,7 +126,7 @@ def test_corrupt(config):
         new_l["tidal:uri:val"]
 
 
-def test_delete(config):
+def test_item_deleted_from_disk_raises_keyerror(config):
     l = LruCache(max_items_ram=8, persist=True, directory="cache")
     l.update({"tidal:uri:val": "hi", "tidal:uri:otherval": 17})
     del l
@@ -125,13 +138,20 @@ def test_delete(config):
         new_l["tidal:uri:val"]
 
 
-def test_prune_deleted(config):
+def test_prune_nonexistent_item_continues_silently(config):
+    l = LruCache(max_items_ram=8, persist=True, directory="cache")
+    l["tidal:uri:val"] = "hi"
+    l.prune("tidal:uri:nonsuch")
+
+
+def test_prune_item_deleted_from_disk_continues_silently(config):
     l = LruCache(max_items_ram=8, persist=True, directory="cache")
     l.update({"tidal:uri:val": "hi", "tidal:uri:otherval": 17})
     del l
     Path(config["core"]["cache_dir"], "tidal/cache/uri/tidal-uri-val.cache").unlink()
 
     new_l = LruCache(max_items_ram=8, persist=True, directory="cache")
+    assert not len(new_l)
     new_l.prune("tidal:uri:otherval")
     new_l.prune("tidal:uri:val")
 
@@ -200,7 +220,7 @@ def test_migrate_deletes_old_file_when_new_present(lru_cache):
 
 
 @pytest.mark.xfail
-def test_lru(lru_cache):
+def test_cache_is_lru(lru_cache):
     lru_cache.update({f"tidal:uri:{val}": val for val in range(8)})
     lru_cache["tidal:uri:0"]
     lru_cache["tidal:uri:8"] = 8
