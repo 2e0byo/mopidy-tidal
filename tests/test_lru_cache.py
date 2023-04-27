@@ -170,6 +170,8 @@ def test_unlimited_cache_grows_without_limit_in_ram(config):
     assert len(l) == 2**12
 
 
+@pytest.mark.gt_3_7
+@pytest.mark.gt_3_8
 def test_migrate_moves_old_file(lru_cache):
     uri = "tidal:uri:val"
     value = "hi"
@@ -195,6 +197,8 @@ def test_migrate_moves_old_file(lru_cache):
     assert not old_style_cache_file.exists()
 
 
+@pytest.mark.gt_3_7
+@pytest.mark.gt_3_8
 def test_migrate_deletes_old_file_when_new_present(lru_cache):
     uri = "tidal:uri:val"
     value = "hi"
