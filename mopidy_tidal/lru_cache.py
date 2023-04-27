@@ -25,7 +25,7 @@ def migrate(new: Path, old: Path):
 
 
 class LruCache(OrderedDict):
-    def __init__(self, max_size: Optional[int] = 1024, persist=True, directory=""):
+    def __init__(self, max_items_ram: Optional[int] = 1024, persist=True, directory=""):
         """
         :param max_size: Max size of the cache in memory. Set 0 or None for no
             limit (default: 1024)
@@ -35,10 +35,10 @@ class LruCache(OrderedDict):
             subfolder of the cache directory (default: '')
         """
         super().__init__(self)
-        if max_size:
-            assert max_size > 0, f"Invalid cache size: {max_size}"
+        if max_items_ram:
+            assert max_items_ram > 0, f"Invalid cache size: {max_items_ram}"
 
-        self._max_size = max_size or 0
+        self._max_size = max_items_ram or 0
         self._cache_dir = Path(Extension.get_cache_dir(context.get_config()), directory)
         self._persist = persist
         if persist:
@@ -47,7 +47,7 @@ class LruCache(OrderedDict):
         self._check_limit()
 
     @property
-    def max_size(self):
+    def max_items_ram(self):
         return self._max_size
 
     @property
@@ -158,9 +158,9 @@ class LruCache(OrderedDict):
         self._check_limit()
 
     def _check_limit(self):
-        if self.max_size:
+        if self.max_items_ram:
             # delete oldest entries
-            while len(self) > self.max_size:
+            while len(self) > self.max_items_ram:
                 self.popitem(last=False)
 
 

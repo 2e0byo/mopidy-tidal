@@ -9,15 +9,15 @@ from mopidy_tidal.lru_cache import LruCache, SearchCache
 @pytest.fixture
 def lru_cache(config):
     cache_dir = config["core"]["cache_dir"]
-    return LruCache(max_size=8, persist=True, directory="cache")
+    return LruCache(max_items_ram=8, persist=True, directory="cache")
 
 
 def test_props(config):
-    l = LruCache(max_size=1678, persist=True, directory="cache")
-    assert l.max_size == 1678
+    l = LruCache(max_items_ram=1678, persist=True, directory="cache")
+    assert l.max_items_ram == 1678
     assert l.persist
-    l = LruCache(max_size=1679, persist=False, directory="cache")
-    assert l.max_size == 1679
+    l = LruCache(max_items_ram=1679, persist=False, directory="cache")
+    assert l.max_items_ram == 1679
     assert not l.persist
 
 
@@ -88,10 +88,10 @@ def test_prune_all(lru_cache):
 
 
 def test_persist(config):
-    l = LruCache(max_size=8, persist=True, directory="cache")
+    l = LruCache(max_items_ram=8, persist=True, directory="cache")
     l.update({"tidal:uri:val": "hi", "tidal:uri:otherval": 17, "tidal:uri:none": None})
     del l
-    new_l = LruCache(max_size=8, persist=True, directory="cache")
+    new_l = LruCache(max_items_ram=8, persist=True, directory="cache")
     new_l["tidal:uri:anotherval"] = 18
     assert new_l["tidal:uri:val"] == "hi"
     assert new_l["tidal:uri:otherval"] == 17
@@ -100,52 +100,52 @@ def test_persist(config):
 
 
 def test_corrupt(config):
-    l = LruCache(max_size=8, persist=True, directory="cache")
+    l = LruCache(max_items_ram=8, persist=True, directory="cache")
     l.update({"tidal:uri:val": "hi", "tidal:uri:otherval": 17})
     del l
     Path(config["core"]["cache_dir"], "tidal/cache/uri/tidal-uri-val.cache").write_text(
         "hahaha"
     )
 
-    new_l = LruCache(max_size=8, persist=True, directory="cache")
+    new_l = LruCache(max_items_ram=8, persist=True, directory="cache")
     assert new_l["tidal:uri:otherval"] == 17
     with pytest.raises(KeyError):
         new_l["tidal:uri:val"]
 
 
 def test_delete(config):
-    l = LruCache(max_size=8, persist=True, directory="cache")
+    l = LruCache(max_items_ram=8, persist=True, directory="cache")
     l.update({"tidal:uri:val": "hi", "tidal:uri:otherval": 17})
     del l
     Path(config["core"]["cache_dir"], "tidal/cache/uri/tidal-uri-val.cache").unlink()
 
-    new_l = LruCache(max_size=8, persist=True, directory="cache")
+    new_l = LruCache(max_items_ram=8, persist=True, directory="cache")
     assert new_l["tidal:uri:otherval"] == 17
     with pytest.raises(KeyError):
         new_l["tidal:uri:val"]
 
 
 def test_prune_deleted(config):
-    l = LruCache(max_size=8, persist=True, directory="cache")
+    l = LruCache(max_items_ram=8, persist=True, directory="cache")
     l.update({"tidal:uri:val": "hi", "tidal:uri:otherval": 17})
     del l
     Path(config["core"]["cache_dir"], "tidal/cache/uri/tidal-uri-val.cache").unlink()
 
-    new_l = LruCache(max_size=8, persist=True, directory="cache")
+    new_l = LruCache(max_items_ram=8, persist=True, directory="cache")
     new_l.prune("tidal:uri:otherval")
     new_l.prune("tidal:uri:val")
 
 
-def test_max_size(lru_cache):
+def test_cache_is_limited_by_max_items_in_ram(lru_cache):
     lru_cache.update({f"tidal:uri:{val}": val for val in range(8)})
     assert len(lru_cache) == 8
     lru_cache["tidal:uri:8"] = 8
     assert lru_cache == {f"tidal:uri:{val}": val for val in range(1, 9)}
 
 
-def test_no_max_size(config):
-    l = LruCache(max_size=0, persist=False)
-    assert not l.max_size
+def test_unlimited_cache_grows_without_limit_in_ram(config):
+    l = LruCache(max_items_ram=0, persist=False)
+    assert not l.max_items_ram
     l.update({f"tidal:uri:{val}": val for val in range(2**12)})
     assert len(l) == 2**12
 
