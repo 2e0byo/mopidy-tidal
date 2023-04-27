@@ -61,11 +61,14 @@ class LruCache(OrderedDict):
         if not cache_dir:
             cache_dir = Path(obj_type)
 
-        cache_dir = self._cache_dir / cache_dir / id[:2]
+        cache_dir = self._cache_dir / cache_dir
         cache_dir.mkdir(parents=True, exist_ok=True)
         cache_file = cache_dir / id_to_cachef(key)
-        legacy_cache_file = cache_dir / f"{key}.cache"
+        legacy_cache_dir = cache_dir / id[:2]
+        legacy_cache_file = legacy_cache_dir / f"{key}.cache"
         migrate(cache_file, legacy_cache_file)
+        legacy_cache_path = legacy_cache_dir / cache_file.name
+        migrate(cache_file, legacy_cache_path)
 
         return cache_file
 

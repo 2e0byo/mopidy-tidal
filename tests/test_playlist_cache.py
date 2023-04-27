@@ -9,7 +9,7 @@ def test_metadata_cache(config):
     cache = PlaylistMetadataCache(directory="cache")
     uniq = object()
     outf = (
-        Path(config["core"]["cache_dir"], "tidal/cache/playlist_metadata/00")
+        Path(config["core"]["cache_dir"], "tidal/cache/playlist_metadata")
         / "tidal-playlist-00-1-2.cache"
     )
     assert not outf.exists()

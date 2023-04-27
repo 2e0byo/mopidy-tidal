@@ -103,9 +103,9 @@ def test_corrupt(config):
     l = LruCache(max_size=8, persist=True, directory="cache")
     l.update({"tidal:uri:val": "hi", "tidal:uri:otherval": 17})
     del l
-    Path(
-        config["core"]["cache_dir"], "tidal/cache/uri/va/tidal-uri-val.cache"
-    ).write_text("hahaha")
+    Path(config["core"]["cache_dir"], "tidal/cache/uri/tidal-uri-val.cache").write_text(
+        "hahaha"
+    )
 
     new_l = LruCache(max_size=8, persist=True, directory="cache")
     assert new_l["tidal:uri:otherval"] == 17
@@ -117,7 +117,7 @@ def test_delete(config):
     l = LruCache(max_size=8, persist=True, directory="cache")
     l.update({"tidal:uri:val": "hi", "tidal:uri:otherval": 17})
     del l
-    Path(config["core"]["cache_dir"], "tidal/cache/uri/va/tidal-uri-val.cache").unlink()
+    Path(config["core"]["cache_dir"], "tidal/cache/uri/tidal-uri-val.cache").unlink()
 
     new_l = LruCache(max_size=8, persist=True, directory="cache")
     assert new_l["tidal:uri:otherval"] == 17
@@ -129,7 +129,7 @@ def test_prune_deleted(config):
     l = LruCache(max_size=8, persist=True, directory="cache")
     l.update({"tidal:uri:val": "hi", "tidal:uri:otherval": 17})
     del l
-    Path(config["core"]["cache_dir"], "tidal/cache/uri/va/tidal-uri-val.cache").unlink()
+    Path(config["core"]["cache_dir"], "tidal/cache/uri/tidal-uri-val.cache").unlink()
 
     new_l = LruCache(max_size=8, persist=True, directory="cache")
     new_l.prune("tidal:uri:otherval")
@@ -161,7 +161,9 @@ def test_migrate_moves_old_file(lru_cache):
     assert cache_file == new_style_cache_file, "Cache filename not dash-separated"
 
     # Rename the cache filename to match the old file format
-    old_style_cache_file = cache_file.with_stem(uri)
+    old_style_cache_dir = cache_file.parent / "va"
+    old_style_cache_dir.mkdir()
+    old_style_cache_file = cache_file.parent / f"va/{uri}.cache"
     cache_file.rename(old_style_cache_file)
 
     # Remove the in-memory cache element in order to force a filesystem reload
@@ -183,7 +185,9 @@ def test_migrate_deletes_old_file_when_new_present(lru_cache):
     new_style_cache_file = cache_file.with_stem("-".join(uri.split(":")))
     assert cache_file == new_style_cache_file, "Cache filename not dash-separated"
 
-    old_style_cache_file = cache_file.with_stem(uri)
+    old_style_cache_dir = cache_file.parent / "va"
+    old_style_cache_dir.mkdir()
+    old_style_cache_file = cache_file.parent / f"va/{uri}.cache"
     shutil.copy(cache_file, old_style_cache_file)
     assert old_style_cache_file.exists()
 
