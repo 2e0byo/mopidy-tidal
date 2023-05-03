@@ -1,7 +1,7 @@
 from mopidy_tidal.playback import TidalPlaybackProvider
 
 
-def test_playback_new_api(mocker):
+def test_playback_new_api(mocker, config):
     uniq = object()
     session = mocker.Mock(spec=["track"])
     session.mock_add_spec(["track"])

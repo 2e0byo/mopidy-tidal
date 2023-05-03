@@ -31,6 +31,9 @@ class Extension(ext.Extension):
         schema["client_secret"] = config.String(optional=True)
         schema["playlist_cache_refresh_secs"] = config.Integer(optional=True)
         schema["lazy"] = config.Boolean(optional=True)
+        schema["track_cache_size"] = config.String(optional=True)
+        schema["track_cache_enabled"] = config.Boolean(optional=True)
+        schema["track_cache_timeout"] = config.Integer(optional=True)
         return schema
 
     def setup(self, registry):

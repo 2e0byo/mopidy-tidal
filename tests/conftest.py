@@ -29,6 +29,9 @@ def config(tmp_path):
             "client_secret": "client_secret",
             "quality": "LOSSLESS",
             "lazy": False,
+            "track_cache_size": "300M",
+            "track_cache_enabled": True,
+            "track_cache_timeout": 2,
         },
     }
     context.set_config(cfg)
