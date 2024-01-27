@@ -1,12 +1,39 @@
 """A heap implementation for the lru cache."""
-from enum import Enum
+from dataclasses import dataclass
+from enum import Enum, auto
 from heapq import heappop, heappush
 from itertools import count
-from typing import Any
+from typing import Any, Generic, NamedTuple, Self, TypeVar
+
+# _states = Enum("states", "REMOVED")
 
 
-class Heap:
-    _states = Enum("states", "REMOVED")
+class _State(int, Enum):
+    PRESENT = auto()
+    REMOVED = auto()
+
+
+@dataclass
+class _Node:
+    obj: Any
+    state: _State
+    weight: int
+
+    def __eq__(self, other: Self) -> bool:
+        return self.weight == other.weight
+
+    def __lt__(self, other: Self) -> bool:
+        return self.weight < other.weight
+
+    def __gt__(self, other: Self) -> bool:
+        return self.weight > other.weight
+
+
+_T = TypeVar("_T")
+
+
+class Heap(Generic[_T]):
+    """A heap where node weighting comes from insertion order."""
 
     def __init__(self, initial=None):
         self._heap = []
@@ -23,30 +50,27 @@ class Heap:
     def entries(self) -> tuple:
         return tuple(self._heap_map.keys())
 
-    def __contains__(self, x: Any):
+    def __contains__(self, x: _T):
         return x in self._heap_map
 
-    def remove(self, item: Any):
+    def remove(self, item: _T):
         """Remove an entry by"""
-        el = self._heap_map.pop(item)
-        el[1] = self._states.REMOVED
+        node = self._heap_map.pop(item)
+        # Mark for removal when heap popped
+        node.state = _State.REMOVED
 
-    def pop(self) -> Any:
+    def pop(self) -> _T:
         """Pop."""
-        while True:
-            val = heappop(self._heap)
-            if val[1] != self._states.REMOVED:
-                break
-        # while (val := heappop(self._heap))[1] == self._states.REMOVED:
-        #     pass
-        del self._heap_map[val[1]]
-        return val[1]
+        while (node := heappop(self._heap)).state is _State.REMOVED:
+            pass
+        del self._heap_map[node.obj]
+        return node.obj
 
-    def push(self, item: Any):
+    def push(self, item: _T):
         """Push."""
-        entry = [next(self._count), item]
-        self._heap_map[item] = entry
-        heappush(self._heap, entry)
+        node = _Node(item, _State.PRESENT, next(self._count))
+        self._heap_map[item] = node  # keep reference for out-of-order operations
+        heappush(self._heap, node)
 
     def move_to_top(self, item: Any):
         """Move an item to the top of the queue, i.e max valued."""
