@@ -32,6 +32,11 @@ def _parse_size(s: str) -> int:
 _Download = namedtuple("_Download", "process, outf")
 
 
+def _cleanup(lockfile: Path):
+    lockfile.with_suffix("").unlink(missing_ok=True)
+    lockfile.unlink(missing_ok=True)
+
+
 class CachingRetriever:
     MAX_DOWNLOADS = 2  # Max parallel downloads.  Setting this to 1 minimises bandwidth, but prevents returning to tracks which failed to buffer.
 
@@ -47,8 +52,7 @@ class CachingRetriever:
         self._cache_dir = Path(cache_dir, directory).resolve()
         self._cache_dir.mkdir(parents=True, exist_ok=True)
         for fn in self._cache_dir.glob("*.dirty"):
-            fn.with_suffix("").unlink(missing_ok=True)
-            fn.unlink()
+            _cleanup(fn)
         self._heap = Heap(
             sorted(self._cache_dir.glob("*"), key=lambda p: p.stat().st_atime)
         )
@@ -121,8 +125,7 @@ class CachingRetriever:
             if download.process.is_alive():
                 download.process.kill()
 
-            download.outf.unlink(missing_ok=True)
-            download.outf.with_suffix(".dirty").unlink(missing_ok=True)
+            _cleanup(download.outf.with_suffix(".dirty"))
 
         download = _Download(
             Process(target=self._background_retrieve, args=(url, outf)), outf
