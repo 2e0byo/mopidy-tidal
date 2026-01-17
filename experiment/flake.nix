@@ -15,8 +15,20 @@
     flake-utils.lib.eachDefaultSystem
     (
       system: let
+        libsoup-overlay = final: prev: {
+          libsoup_3 = prev.libsoup_3.overrideAttrs (_: {
+            src = pkgs.fetchgit {
+              url = "https://gitlab.gnome.org/GNOME/libsoup.git";
+              rev = "e9b681a5";
+              hash = "sha256-r+i1gGJHcXJW20W9PNz1Z108tkPhiqh9ytkrHKbWW58=";
+            };
+            version = "3.6.5-5";
+          });
+        };
+
         pkgs = import nixpkgs {
           inherit system;
+          overlays = [libsoup-overlay];
         };
         python = pkgs.python313;
         buildInputs =
@@ -113,18 +125,13 @@
         };
       in
         with pkgs; {
+          inherit libsoup3;
           devShells.default = mkShell {
+            # this also works, if you don't use the overlay above
+            # env = { GST_PLUGIN_FEATURE_RANK="curlhttpsrc:MAX";};
             buildInputs =
               (with pkgs; [
                 mopidy
-                gst_all_1.gstreamer
-                gst_all_1.gst-plugins-base
-                gst_all_1.gst-plugins-good
-                gst_all_1.gst-plugins-bad
-                gst_all_1.gst-plugins-ugly
-                gst_all_1.gst-libav
-                libsoup_2_4
-                glib-networking
                 mopidy-local
                 mopidy-iris
                 mopidy-mpd
