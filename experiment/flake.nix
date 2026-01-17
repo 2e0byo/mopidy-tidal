@@ -113,7 +113,7 @@
         };
       in
         with pkgs; {
-          devShells.system = mkShell {
+          devShells.default = mkShell {
             buildInputs =
               (with pkgs; [
                 mopidy
@@ -134,15 +134,6 @@
                 # local-mopidy-tidal
                 pkgs.mopidy-tidal
               ];
-          };
-          devShells.default = mkShell {
-            inherit buildInputs;
-            inherit env;
-            shellHook = ''
-              # pre-commit install
-              [ ! -d $UV_PROJECT_ENVIRONMENT ] && uv venv $UV_PROJECT_ENVIRONMENT --python ${python}/bin/python
-              source $UV_PROJECT_ENVIRONMENT/bin/activate
-            '';
           };
         }
     );
